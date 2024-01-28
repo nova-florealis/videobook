@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Read Book</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let i = 0; // Start from the first chunk
+
+            function fetchNextChunk() {
+                $.getJSON(`/get_chunk/${i}`, function(data) {
+                    if (data.end) {
+                        alert("End of the book");
+                        $('#nextChunkButton').prop('disabled', true); // Disable the button if at the end
+                        return;
+                    }
+
+                    $('#content').append(`<p>${data.paragraph}</p><img src="${data.image_url}" alt="Generated Image">`);
+                    i++; // Prepare to fetch the next chunk
+                });
+            }
+
+            // Initial fetch
+            fetchNextChunk();
+
+            // // Set an interval or use a more interactive approach, like a button, to fetch the next chunk
+            // setInterval(fetchNextChunk, 10000); // Fetch the next chunk every 10 seconds
+
+            // Attach the fetchNextChunk function to the button's click event
+            $('#nextChunkButton').click(fetchNextChunk);
+
+        });
+    </script>
+</head>
+<body>
+    <div id="content">
+        <!-- Content will be loaded here dynamically -->
+    </div>
+    <button id="nextChunkButton">Load Next Chunk</button> <!-- Button to load the next chunk -->
+</body>
+</html>

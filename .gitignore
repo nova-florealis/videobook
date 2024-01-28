@@ -1,0 +1,5 @@
+static/images
+static/speech
+.env
+env
+set_env_vars.sh

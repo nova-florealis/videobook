@@ -1,0 +1,5 @@
+torch
+elevenlabs
+diffusers
+accelerate
+flask

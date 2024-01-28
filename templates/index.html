@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,900&family=Rubik+Glitch+Pop&display=swap" rel="stylesheet">
+    <title>Read Book</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            background-color: rgb(21, 21, 21); /* Set body background to black */
+            color: #ffa500; /* Set global text color to orange */
+            font-family: 'DM Sans', Arial, sans-serif; /* Use Helvetica Neue with fallbacks */
+            font-weight: 900; /* Make text bold */
+            font-size: 20px; /* Set font size to 20px */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column; /* Stack elements vertically */
+        }
+
+        #content {
+            text-align: center; /* Center the content text */
+            margin: 10%; /* Space between text and button */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column; /* Stack elements vertically */
+            gap: 0.3rem;
+        }
+
+        #imageContainer {
+            width: 512px; /* Width of the image container */
+            height: 512px; /* Height of the image container */
+            background-color: rgb(30, 30, 30); /* Background color in absence of an image */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 1rem; /* Added border radius */
+        }
+
+        #imageContainer img {
+            max-width: 100%; /* Ensure image does not exceed container's width */
+            max-height: 100%; /* Ensure image does not exceed container's height */
+            border-radius: 1rem; /* Added border radius */
+        }
+
+        #audioPlayer {
+            display: none; /* Hide the audio player */
+        }
+
+        button {
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+            color: inherit; /* Inherits the orange color set globally */
+            text-decoration: underline;
+            cursor: pointer;
+            font-family: inherit; /* Inherits the Helvetica Neue font set globally */
+            font-size: 36px; /* Inherits the 20px size set globally */
+            font-weight: inherit;
+        }
+
+        @keyframes ellipsis {
+            0%, 100% {
+                text-shadow: 
+                    0.25em 0 0 #ffa500, 
+                    0.5em 0 0 #ffa500, 
+                    0.75em 0 0 #ffa500; /* All dots visible */
+            }
+            25% {
+                text-shadow: 
+                    0.25em 0 0 transparent, 
+                    0.5em 0 0 currentColor, 
+                    0.75em 0 0 currentColor; /* First dot hidden */
+            }
+            50% {
+                text-shadow: 
+                    0.25em 0 0 transparent, 
+                    0.5em 0 0 transparent, 
+                    0.75em 0 0 currentColor; /* First and second dots hidden */
+            }
+            75% {
+                text-shadow: 
+                    0.25em 0 0 transparent, 
+                    0.5em 0 0 transparent, 
+                    0.75em 0 0 transparent; /* All dots hidden */
+            }
+        }
+
+        .ellipsis {
+            display: inline-block;
+            position: relative;
+            vertical-align: bottom;
+            color: transparent; /* Hide the actual text ('...') */
+            pointer-events: none; /* Make it non-interactable */
+            user-select: none; /* Prevent text selection */
+        }
+
+        .ellipsis::after {
+            content: '...'; /* Text to be animated */
+            animation: ellipsis 1.5s infinite; /* Apply the animation */
+            position: absolute;
+            left: 0;
+        }
+
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            let i = 0; // Start from the first chunk
+            let nextData = null; // To store the next chunk's data
+            let isOngoing = false;
+
+            function renderData() {
+                if (nextData && isOngoing) {
+                    // Update the image and text with nextData
+                    $('#imageContainer').html(`<img src="${nextData.image_url}" alt="Generated Image">`);
+                    $('#textContainer').text(nextData.paragraph);
+
+                    // Update the audio player source
+                    const audioPlayer = $('#audioPlayer');
+                    audioPlayer.attr('src', nextData.audio_url);
+                    audioPlayer[0].load();  // Reload the audio element source
+
+                    // Play the audio
+                    audioPlayer[0].play().then(() => {
+                        // Fetch the next chunk as soon as the audio starts playing
+                        if (isOngoing) { fetchNextChunk(false) }; // Pass false to indicate not to render immediately
+                    }).catch(e => console.error('Audio play failed:', e));
+
+                    nextData = null; // Clear nextData after rendering
+                }
+            }
+
+            function fetchNextChunk(renderImmediately) {
+                $.getJSON(`/get_chunk/${i}`, function(data) {
+                    if (data.end) {
+                        $('#nextChunkButton').prop('disabled', true);
+                        alert("End of the book");
+                        return;
+                    }
+                    if (renderImmediately) {
+                        nextData = data;
+                        renderData(data); // Render data immediately if required
+                    } else {
+                        nextData = data; // Store the fetched data for later rendering
+                    }
+                    i++; // Increment to prepare for fetching the next chunk
+                });
+            }
+
+            // "Start" button logic
+            $('#startButton').click(function() {
+                console.log("Start");
+                isOngoing = true;
+                fetchNextChunk(true); // Fetch and render the first chunk
+                $(this).hide(); // Disable and hide the "Start" button
+                // $('#nextChunkButton').show(); // Show the "Load Next Chunk" button
+                $('#stopButton').show(); // Show the "Stop" button
+            });
+
+            $('#stopButton').click(function() {
+                i = 0;
+                nextData = null;
+                isOngoing = false;
+                $('#audioPlayer')[0].pause();
+                $(this).hide()
+                $('#startButton').show(); // Show the "Start" button
+            });
+
+            // Attach 'ended' event listener to audio player for rendering the next chunk after audio ends
+            $('#audioPlayer').on('ended', function() {
+                if (nextData) { // If there's data fetched, render it after audio ends
+                    renderData();
+                } else { // If nextData is null, start polling for it
+                    $('#textContainer').html($('#textContainer').text() + "<span class='ellipsis'>...</span>");
+                    let checkDataInterval = setInterval(function() {
+                        if (nextData && isOngoing) { // Check if nextData is available on each interval
+                            clearInterval(checkDataInterval); // Stop polling
+                            renderData(); // Render the data once available
+                        }
+                    }, 100); // Polling interval (e.g., 100 milliseconds)
+                }
+            });
+
+            // "Next Chunk" button logic
+            $('#nextChunkButton').click(function() {
+                if (nextData) { // If nextData is available, render it immediately
+                    renderData();
+                } else { // If nextData is not available, fetch the next chunk and render immediately
+                    fetchNextChunk(true);
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <div id="content">
+        <div id="imageContainer">
+            <!-- Image or white space will be here -->
+        </div>
+        <div id="textContainer">
+            <!-- Text will be loaded here dynamically -->
+        </div>
+        <audio id="audioPlayer" controls>
+            Your browser does not support the audio element.
+        </audio>
+        <button id="startButton">START</button> <!-- "Start" button -->
+        <button id="nextChunkButton" style="display:none;">Load Next Chunk</button> <!-- Initially hidden -->
+        <button id="stopButton" style="display:none;">STOP</button> <!-- Initially hidden -->
+    </div>
+</body>
+</html>
