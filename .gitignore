@@ -3,3 +3,4 @@ static/speech
 .env
 env
 set_env_vars.sh
+__pycache__
